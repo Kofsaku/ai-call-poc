@@ -21,11 +21,11 @@ function voiceResponse() {
   try {
     const response = new VoiceResponse()
     
-    // 1. アプリが「こんにちは」という
+    // 1. アプリが初めの挨拶をする
     response.say({
       voice: "Polly.Mizuki",
       language: "ja-JP"
-    }, "こんにちは")
+    }, "こんにちは、合同会社AIコールでございます。お世話になっております。AI関連の新しいサービスについてご案内させていただきたいのですが、ご担当者様はいらっしゃいますでしょうか？")
 
     // 2. ユーザーの入力を待つ
     response.gather({
@@ -34,7 +34,7 @@ function voiceResponse() {
       speechTimeout: "auto",
       action: `${process.env.NGROK_URL}/api/twilio/voice/response?step=1`,
       method: "POST",
-      timeout: 5,
+      timeout: 10,
       finishOnKey: "#"
     })
 
@@ -52,7 +52,7 @@ function voiceResponse() {
   } catch (error) {
     console.error("Error generating TwiML:", error)
     return new NextResponse("", {
-      status: 204,
+      status: 200,
       headers: {
         "Content-Type": "text/xml",
       },

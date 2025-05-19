@@ -12,9 +12,9 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     })
 
-    // 空のTwiMLレスポンスを返す
+    // 空のTwiMLレスポンスを返す - 204の代わりに200を使用
     return new NextResponse("", {
-      status: 204,
+      status: 200,
       headers: {
         "Content-Type": "text/xml",
       },
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error processing status callback:", error)
     return new NextResponse("", {
-      status: 204,
+      status: 200,
       headers: {
         "Content-Type": "text/xml",
       },
