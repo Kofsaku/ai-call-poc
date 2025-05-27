@@ -107,113 +107,197 @@ export async function POST(request: Request) {
     const callSid = formData.get("CallSid")?.toString() || "unknown-call"
     const timestamp = new Date().toISOString()
 
-    // URLからクエリパラメータの`step`を取得
-    const { searchParams } = new URL(request.url)
-    const step = searchParams.get("step") || "1"
-    const nextStep = getNextStep(step)
-
-    // 詳細なログ出力
-    console.log("=== 通話情報 ===")
-    console.log(`通話ID: ${callSid}`)
-    console.log(`タイムスタンプ: ${timestamp}`)
-    console.log(`現在のステップ: ${step}`)
-    console.log(`次のステップ: ${nextStep}`)
-    console.log("=== 音声認識結果 ===")
-    console.log(`認識テキスト: ${speechResult}`)
-    console.log(`信頼度: ${confidence}`)
-
-    const response = new VoiceResponse()
-
-    // オペレーターに接続するステップの場合
-    if (step === "operator") {
-      response.say({
-        voice: "Polly.Mizuki",
-        language: "ja-JP"
-      }, "担当者におつなぎしています。少々お待ちください。")
-      
-      // オペレーター接続APIを呼び出す
-      response.redirect({
-        method: "POST"
-      }, `${process.env.NGROK_URL}/api/twilio/voice/connect/operator`)
-      
-      const twiml = response.toString()
-      console.log("=== 生成されたTwiML (オペレーター接続) ===")
-      console.log(twiml)
-      
-      return new NextResponse(twiml, {
+    // 音声認識の信頼度チェック
+    const confidenceValue = parseFloat(confidence?.toString() || "0")
+    if (confidenceValue < 0.5) {
+      console.log("音声認識の信頼度が低いため、再試行します")
+      const response = new VoiceResponse()
+      response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？")
+      response.gather({
+        input: ["speech"],
+        language: "ja-JP",
+        timeout: 15,
+        speechTimeout: "auto",
+        action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=initial`,
+        method: "POST",
+        // hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構"
+      })
+      return new NextResponse(response.toString(), {
         headers: { "Content-Type": "text/xml; charset=utf-8" },
       })
     }
 
-    // 通常の会話ステップ
-    let reply = ""
-    
-    // 初めての会話で無音声入力の場合は初期フォールバック
-    if (step === "1" && !speechResult) {
-      reply = "ご担当者様、いらっしゃいますでしょうか？AIを活用した業務効率化サービスについてご案内したいのですが。"
-    } 
-    // 音声入力がある場合はChatGPTで応答を生成
-    else if (speechResult) {
-      const userText = speechResult.toString()
-      console.log("=== ユーザー入力 ===")
-      console.log(`ユーザー: ${userText}`)
+    // URLからクエリパラメータの`state`を取得
+    const { searchParams } = new URL(request.url)
+    const state = searchParams.get("state") || "initial"
+    const response = new VoiceResponse()
 
-      // さようならで終了
-      if (userText.includes("さようなら") || userText.includes("切る") || userText.includes("結構です") || userText.includes("いりません")) {
-        reply = "お忙しいところ失礼いたしました。またの機会にご連絡させていただきます。失礼いたします。"
-        console.log("=== 通話終了 ===")
-        console.log(`アプリ: ${reply}`)
-        response.say({
-          voice: "Polly.Mizuki",
-          language: "ja-JP"
-        }, reply)
-        response.hangup()
-        return new NextResponse(response.toString(), {
-          headers: { "Content-Type": "text/xml; charset=utf-8" },
-        })
-      }
-
-      // ChatGPTで応答を生成
-      reply = await getChatGPTResponse(userText, callSid, step)
-    } else {
-      // 無音声入力でステップ1以外の場合
-      reply = "申し訳ありません、お声が聞こえませんでした。もう一度お願いできますでしょうか？"
-    }
-
-    console.log("=== アプリ応答 ===")
-    console.log(`アプリ: ${reply}`)
-
-    response.say({
-      voice: "Polly.Mizuki",
-      language: "ja-JP"
-    }, reply)
-
-    // ステップ3の場合は次のステップでオペレーターに接続
-    if (step === "3") {
-      response.redirect({
-        method: "POST"
-      }, `${process.env.NGROK_URL}/api/twilio/voice/response?step=operator`)
-    } else {
-      // 次のステップのユーザー入力を待つ
-      response.gather({
-        input: ["speech"],
-        language: "ja-JP",
-        speechTimeout: "auto",
-        action: `${process.env.NGROK_URL}/api/twilio/voice/response?step=${nextStep}`,
-        method: "POST",
-        timeout: 10,
-      })
+    // ステートごとの応答ロジック
+    switch (state) {
+      case "initial":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "すみません、実は本日、");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "初めてお電話をさせていただきました！");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 30,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=second_response`,
+          method: "POST",
+          hints: "はい,ええ,"
+        });
+        break;
+      case "first_response":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 30,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=check_availability`,
+          method: "POST",
+          hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構,外出,会議,打ち合わせ,電話中,社名,会社名,どちら様"
+        });
+        break;
+      case "second_response":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 30,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=check_availability`,
+          method: "POST",
+          hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構,外出,会議,打ち合わせ,電話中"
+        });
+        break;
+      case "check_availability":
+        const userResponse = speechResult?.toString().toLowerCase() || "";
+        
+        if (userResponse.includes("社名") || userResponse.includes("会社名") || userResponse.includes("どちら様")) {
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ＡＩコールシステムの安達と申します。");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+          response.gather({
+            input: ["speech"],
+            language: "ja-JP",
+            timeout: 30,
+            speechTimeout: "auto",
+            action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=check_availability`,
+            method: "POST",
+            hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構,外出,会議,打ち合わせ,電話中"
+          });
+        } else if (userResponse.includes("外出") || userResponse.includes("会議") || 
+                  userResponse.includes("打ち合わせ") || userResponse.includes("電話中") || 
+                  userResponse.includes("席を外") || userResponse.includes("不在")) {
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではまたタイミングをみてお電話させていただきます。");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+          response.pause({ length: 5 });
+          response.hangup();
+        } else if (userResponse.includes("お断り") || userResponse.includes("結構") || 
+                  userResponse.includes("失礼") || userResponse.includes("要らない")) {
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "大変失礼を致しました。");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "また何かございましたら、よろしくお願い致します。");
+          response.pause({ length: 5 });
+          response.hangup();
+        } else if (userResponse.includes("ホームページ") || userResponse.includes("メール") || 
+                  userResponse.includes("問い合わせ") || userResponse.includes("書き込み")) {
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではホームページから書き込みをさせていただきます。");
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+          response.pause({ length: 5 });
+          response.hangup();
+        } else if (userResponse.includes("はい") || userResponse.includes("担当者")) {
+          response.redirect({
+            method: "POST"
+          }, `${process.env.NGROK_URL}/api/twilio/voice/connect/operator`);
+        } else {
+          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？");
+          response.gather({
+            input: ["speech"],
+            language: "ja-JP",
+            timeout: 30,
+            speechTimeout: "auto",
+            action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=check_availability`,
+            method: "POST",
+            hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構,外出,会議,打ち合わせ,電話中"
+          });
+        }
+        break;
+      case "introduction":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスでございまして、");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 15,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=check_availability`,
+          method: "POST",
+          hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構,外出,会議,打ち合わせ,電話中"
+        });
+        break;
+      case "schedule_callback":
+        const callbackTime = speechResult?.toString() || "";
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ご指定いただいた時間に、改めてお電話させていただきます。");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ご対応いただき、ありがとうございました。");
+        response.pause({ length: 2 });
+        response.hangup();
+        break;
+      case "repeat_company":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ＡＩコールシステムの安達と申します。");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 15,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=introduction`,
+          method: "POST",
+          hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構"
+        });
+        break;
+      case "unavailable":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではまたタイミングをみてお電話させていただきます。");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+        response.pause({ length: 2 });
+        response.hangup();
+        break;
+      case "rejection":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "大変失礼を致しました。");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "また何かございましたら、よろしくお願い致します。");
+        response.pause({ length: 2 });
+        response.hangup();
+        break;
+      case "website":
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではホームページから書き込みをさせていただきます。");
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+        response.pause({ length: 2 });
+        response.hangup();
+        break;
+      default:
+        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？");
+        response.gather({
+          input: ["speech"],
+          language: "ja-JP",
+          timeout: 15,
+          speechTimeout: "auto",
+          action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=initial`,
+          method: "POST",
+          // hints: "はい,いいえ,担当者,営業,お断り,ホームページ,また電話,失礼,結構"
+        });
+        break;
     }
 
     const twiml = response.toString()
-    console.log("=== 生成されたTwiML ===")
-    console.log(twiml)
-    console.log("=====================")
-
     return new NextResponse(twiml, {
-      headers: {
-        "Content-Type": "text/xml; charset=utf-8",
-      },
+      headers: { "Content-Type": "text/xml; charset=utf-8" },
     })
   } catch (error) {
     console.error("=== エラー発生 ===")

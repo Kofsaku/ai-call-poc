@@ -25,17 +25,16 @@ function voiceResponse() {
     response.say({
       voice: "Polly.Mizuki",
       language: "ja-JP"
-    }, "こんにちは、合同会社AIコールでございます。お世話になっております。AI関連の新しいサービスについてご案内させていただきたいのですが、ご担当者様はいらっしゃいますでしょうか？")
+    }, "お世話になります。わたくしＡＩコールシステムの安達といいますが、")
 
     // 2. ユーザーの入力を待つ
     response.gather({
       input: ["speech"],
       language: "ja-JP",
       speechTimeout: "auto",
-      action: `${process.env.NGROK_URL}/api/twilio/voice/response?step=1`,
+      action: `${process.env.NGROK_URL}/api/twilio/voice/response?state=initial`,
       method: "POST",
-      timeout: 10,
-      finishOnKey: "#"
+      timeout: 5
     })
 
     const twiml = response.toString()
