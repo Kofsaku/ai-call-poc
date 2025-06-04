@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import twilio from "twilio";
+import { sayElevenLabs } from "@/lib/elevenlabs";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
@@ -21,10 +22,7 @@ export async function POST(request: Request) {
   const response = new VoiceResponse();
   
   // オペレーターへの接続メッセージ
-  response.say(
-    { voice: "Polly.Mizuki-Neural", language: "ja-JP" },
-    "担当者にお繋ぎいたします。少々お待ちください。"
-  );
+  sayElevenLabs(response, "担当者にお繋ぎいたします。少々お待ちください。");
 
   // オペレーターとの通話を開始
   response.dial({

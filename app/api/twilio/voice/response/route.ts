@@ -1,6 +1,7 @@
 // app/api/twilio/voice/response/route.ts の例
 import { NextResponse } from "next/server"
 import twilio from "twilio"
+import { sayElevenLabs } from "@/lib/elevenlabs"
 
 const VoiceResponse = twilio.twiml.VoiceResponse
 
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
     if (confidenceValue < 0.5) {
       console.log("音声認識の信頼度が低いため、再試行します")
       const response = new VoiceResponse()
-      response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？")
+      sayElevenLabs(response, "申し訳ありません。もう一度お願いできますでしょうか？")
       response.gather({
         input: ["speech"],
         language: "ja-JP",
@@ -135,8 +136,8 @@ export async function POST(request: Request) {
     // ステートごとの応答ロジック
     switch (state) {
       case "initial":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "すみません、実は本日、");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "初めてお電話をさせていただきました！");
+        sayElevenLabs(response, "すみません、実は本日、");
+        sayElevenLabs(response, "初めてお電話をさせていただきました！");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -148,9 +149,9 @@ export async function POST(request: Request) {
         });
         break;
       case "first_response":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        sayElevenLabs(response, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
+        sayElevenLabs(response, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        sayElevenLabs(response, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -162,9 +163,9 @@ export async function POST(request: Request) {
         });
         break;
       case "second_response":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        sayElevenLabs(response, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスを提供している会社でございまして、");
+        sayElevenLabs(response, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        sayElevenLabs(response, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -179,8 +180,8 @@ export async function POST(request: Request) {
         const userResponse = speechResult?.toString().toLowerCase() || "";
         
         if (userResponse.includes("社名") || userResponse.includes("会社名") || userResponse.includes("どちら様")) {
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ＡＩコールシステムの安達と申します。");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+          sayElevenLabs(response, "ＡＩコールシステムの安達と申します。");
+          sayElevenLabs(response, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
           response.gather({
             input: ["speech"],
             language: "ja-JP",
@@ -193,22 +194,22 @@ export async function POST(request: Request) {
         } else if (userResponse.includes("外出") || userResponse.includes("会議") || 
                   userResponse.includes("打ち合わせ") || userResponse.includes("電話中") || 
                   userResponse.includes("席を外") || userResponse.includes("不在")) {
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではまたタイミングをみてお電話させていただきます。");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+          sayElevenLabs(response, "そうですか！");
+          sayElevenLabs(response, "ではまたタイミングをみてお電話させていただきます。");
+          sayElevenLabs(response, "ありがとうございました。");
           response.pause({ length: 5 });
           response.hangup();
         } else if (userResponse.includes("お断り") || userResponse.includes("結構") || 
                   userResponse.includes("失礼") || userResponse.includes("要らない")) {
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "大変失礼を致しました。");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "また何かございましたら、よろしくお願い致します。");
+          sayElevenLabs(response, "そうですか！");
+          sayElevenLabs(response, "大変失礼を致しました。");
+          sayElevenLabs(response, "また何かございましたら、よろしくお願い致します。");
           response.pause({ length: 5 });
           response.hangup();
         } else if (userResponse.includes("ホームページ") || userResponse.includes("メール") || 
                   userResponse.includes("問い合わせ") || userResponse.includes("書き込み")) {
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではホームページから書き込みをさせていただきます。");
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+          sayElevenLabs(response, "ではホームページから書き込みをさせていただきます。");
+          sayElevenLabs(response, "ありがとうございました。");
           response.pause({ length: 5 });
           response.hangup();
         } else if (userResponse.includes("はい") || userResponse.includes("担当者")) {
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
             method: "POST"
           }, `${process.env.NGROK_URL}/api/twilio/voice/connect/operator`);
         } else {
-          response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？");
+          sayElevenLabs(response, "申し訳ありません。もう一度お願いできますでしょうか？");
           response.gather({
             input: ["speech"],
             language: "ja-JP",
@@ -229,9 +230,9 @@ export async function POST(request: Request) {
         }
         break;
       case "introduction":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスでございまして、");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
+        sayElevenLabs(response, "弊社は生成ＡＩを使った新規顧客獲得テレアポのサービスでございまして、");
+        sayElevenLabs(response, "是非、御社の営業の方にご案内できればと思いお電話をさせていただきました！");
+        sayElevenLabs(response, "本日、営業の担当者さまはいらっしゃいますでしょうか？");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -244,13 +245,13 @@ export async function POST(request: Request) {
         break;
       case "schedule_callback":
         const callbackTime = speechResult?.toString() || "";
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ご指定いただいた時間に、改めてお電話させていただきます。");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ご対応いただき、ありがとうございました。");
+        sayElevenLabs(response, "ご指定いただいた時間に、改めてお電話させていただきます。");
+        sayElevenLabs(response, "ご対応いただき、ありがとうございました。");
         response.pause({ length: 2 });
         response.hangup();
         break;
       case "repeat_company":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ＡＩコールシステムの安達と申します。");
+        sayElevenLabs(response, "ＡＩコールシステムの安達と申します。");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -262,27 +263,27 @@ export async function POST(request: Request) {
         });
         break;
       case "unavailable":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではまたタイミングをみてお電話させていただきます。");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+        sayElevenLabs(response, "そうですか！");
+        sayElevenLabs(response, "ではまたタイミングをみてお電話させていただきます。");
+        sayElevenLabs(response, "ありがとうございました。");
         response.pause({ length: 2 });
         response.hangup();
         break;
       case "rejection":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "そうですか！");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "大変失礼を致しました。");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "また何かございましたら、よろしくお願い致します。");
+        sayElevenLabs(response, "そうですか！");
+        sayElevenLabs(response, "大変失礼を致しました。");
+        sayElevenLabs(response, "また何かございましたら、よろしくお願い致します。");
         response.pause({ length: 2 });
         response.hangup();
         break;
       case "website":
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ではホームページから書き込みをさせていただきます。");
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "ありがとうございました。");
+        sayElevenLabs(response, "ではホームページから書き込みをさせていただきます。");
+        sayElevenLabs(response, "ありがとうございました。");
         response.pause({ length: 2 });
         response.hangup();
         break;
       default:
-        response.say({ voice: "Polly.Mizuki", language: "ja-JP" }, "申し訳ありません。もう一度お願いできますでしょうか？");
+        sayElevenLabs(response, "申し訳ありません。もう一度お願いできますでしょうか？");
         response.gather({
           input: ["speech"],
           language: "ja-JP",
@@ -309,10 +310,7 @@ export async function POST(request: Request) {
     // エラー発生時は謝罪メッセージを返す
     try {
       const errorResponse = new VoiceResponse()
-      errorResponse.say({
-        voice: "Polly.Mizuki",
-        language: "ja-JP"
-      }, "申し訳ありません。システムエラーが発生しました。担当者におつなぎします。少々お待ちください。")
+      sayElevenLabs(errorResponse, "申し訳ありません。システムエラーが発生しました。担当者におつなぎします。少々お待ちください。")
       
       errorResponse.redirect({
         method: "POST"

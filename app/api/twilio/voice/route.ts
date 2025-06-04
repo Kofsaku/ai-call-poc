@@ -1,6 +1,7 @@
 // app/api/twilio/voice/route.ts
 import { NextResponse } from "next/server"
 import twilio from "twilio"
+import { sayElevenLabs } from "@/lib/elevenlabs"
 
 const VoiceResponse = twilio.twiml.VoiceResponse
 
@@ -22,10 +23,7 @@ function voiceResponse() {
     const response = new VoiceResponse()
     
     // 1. アプリが初めの挨拶をする
-    response.say({
-      voice: "Polly.Mizuki",
-      language: "ja-JP"
-    }, "お世話になります。わたくしＡＩコールシステムの安達といいますが、")
+    sayElevenLabs(response, "お世話になります。わたくしＡＩコールシステムの安達といいますが、")
 
     // 2. ユーザーの入力を待つ
     response.gather({
