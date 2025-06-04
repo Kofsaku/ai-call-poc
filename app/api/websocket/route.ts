@@ -23,7 +23,7 @@ wss.on('connection', (ws) => {
           // 通話を人間に転送
           await client.calls(callSid)
             .update({
-              url: "https://7ceb-240d-1a-a24-cf00-6ce3-82a1-3b64-583a.ngrok-free.app/api/twilio/voice/connect/operator",
+              url: " https://e9c2-240d-1a-a24-cf00-8d63-dcf6-7e10-29c7.ngrok-free.app/api/twilio/voice/connect/operator",
               method: 'POST'
             });
           console.log('通話が人間に転送されました:', callSid);

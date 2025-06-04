@@ -40,7 +40,7 @@ export async function POST() {
       process.env.TWILIO_AUTH_TOKEN
     )
 
-    const to = "+818070239355"
+    const to = "+819062660207"
     const from = process.env.TWILIO_PHONE_NUMBER
     const baseUrl = process.env.NGROK_URL || "http://localhost:3001"
     const url = `${baseUrl}/api/twilio/voice`
