@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import twilio from "twilio";
+import { getElevenLabsAudioUrl } from "@/lib/elevenlabs";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
@@ -19,11 +20,11 @@ export async function POST(request: Request) {
 
   const response = new VoiceResponse();
   
-  // ウェブコールへの切り替えメッセージ
-  response.say(
-    { voice: "Polly.Mizuki-Neural", language: "ja-JP" },
+  // ウェブコールへの切り替えメッセージ（ElevenLabs 音声）
+  const webCallAudioUrl = await getElevenLabsAudioUrl(
     "ウェブコールに切り替えます。少々お待ちください。"
   );
+  response.play(webCallAudioUrl);
 
   // ウェブコールの設定
   const dial = response.dial({
