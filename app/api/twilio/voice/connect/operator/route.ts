@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
+import { sayElevenLabs } from '@/lib/elevenlabs';
 
 export async function POST() {
   try {
@@ -109,10 +110,7 @@ export async function POST() {
 
     // エラー時のTwiMLを生成
     const errorTwiml = new twilio.twiml.VoiceResponse();
-    errorTwiml.say({
-      voice: 'Polly.Mizuki-Neural',
-      language: 'ja-JP'
-    }, '申し訳ありません。接続に問題が発生しました。');
+    sayElevenLabs(errorTwiml, '申し訳ありません。接続に問題が発生しました。');
 
     return new Response(errorTwiml.toString(), {
       headers: {
